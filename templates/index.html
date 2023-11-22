@@ -1,0 +1,85 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Resume Screening App</title>
+  <style>
+    body {
+      font-family: 'Arial', sans-serif;
+      margin: 0;
+      padding: 0;
+      background-color: #f4f4f4;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      height: 100vh;
+    }
+
+    #app-container {
+      background-color: #fff;
+      border-radius: 10px;
+      box-shadow: 0 0 10px rgba(0, 0, 0, 0.1);
+      padding: 20px;
+      text-align: center;
+      width: 80%;
+      max-width: 600px;
+    }
+
+    #upload-btn {
+      display: inline-block;
+      padding: 10px 20px;
+      font-size: 16px;
+      cursor: pointer;
+      background-color: #4caf50;
+      color: #fff;
+      border: none;
+      border-radius: 5px;
+    }
+
+    #result-container {
+      margin-top: 20px;
+    }
+  </style>
+</head>
+<body>
+  <div id="app-container">
+    <h1>Resume Screening App</h1>
+    <form id="upload-form" enctype="multipart/form-data">
+      <input type="file" id="file-input" name="file" style="display: none;" accept=".pdf, .doc, .docx">
+      <label for="file-input" id="upload-btn">Upload Resume</label>
+    </form>
+    <div id="result-container"></div>
+
+    <script>
+      document.getElementById('file-input').addEventListener('change', handleFileUpload);
+
+      function handleFileUpload(event) {
+        const fileInput = event.target;
+        const file = fileInput.files[0];
+
+        if (file) {
+          const formData = new FormData();
+          formData.append('file', file);
+
+          fetch('/predict', {
+            method: 'POST',
+            body: formData
+          })
+          .then(response => response.json())
+          .then(data => displayResult(data.prediction))
+          .catch(error => console.error('Error:', error));
+        }
+      }
+
+      function displayResult(result) {
+        const resultContainer = document.getElementById('result-container');
+        resultContainer.innerHTML = `
+          <h2>Result</h2>
+          <p>Label: ${result}</p>
+        `;
+      }
+    </script>
+  </div>
+</body>
+</html>

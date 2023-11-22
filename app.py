@@ -1,38 +1,47 @@
-from flask import Flask, request, jsonify
+from flask import Flask, render_template, request, jsonify
 import joblib
-from sklearn.preprocessing import LabelEncoder
+from sklearn.feature_extraction.text import TfidfVectorizer
+from preprocessing import TextCleaner
 
 app = Flask(__name__)
 
-# Define a dummy route for the root URL to avoid 404 error
+# Load the TF-IDF vectorizer and model
+tfidf_vectorizer = joblib.load('tfidf_encoder.pkl')
+model = joblib.load('models/rfc.pkl')  # Adjust the path to your model file
+label_encoder = joblib.load('lable_encoder.pkl')  # Adjust the path to your label encoder file
+
 @app.route('/')
-def index():
-    return 'Welcome to the API!'
+def home():
+    return render_template('index.html')
 
-@app.route('/predict', methods=['POST','GET'])
+@app.route('/predict', methods=['POST'])
 def predict():
-    # Get data from the request
-    data = request.get_json()
+    try:
+        # Get the uploaded file
+        file = request.files['file']
 
-    if not data or 'text' not in data:
-        return jsonify({'error': 'Invalid JSON format or missing "text" key'}), 400
+        # Read the content of the file in binary mode
+        content = file.read()
 
-    # Load LabelEncoder, TF-IDF vectorizer, and the model
-    label_encoder = joblib.load('label_encoder.pkl')
-    tfidf_vectorizer = joblib.load('tfidf_vectorizer.pkl')
-    model = joblib.load('your_model.pkl')
+        # Transform input text using TF-IDF vectorizer
+        
+        text_cleaner= TextCleaner()
+        cleaned_text= text_cleaner.clean([content.decode('utf-8', 'ignore')])
+        print(cleaned_text)
+        
+        input_text_tfidf = tfidf_vectorizer.transform(cleaned_text)
 
-    # Transform input text using TF-IDF vectorizer
-    input_text_tfidf = tfidf_vectorizer.transform([data['text']])
+        # Make predictions
+        prediction_encoded = model.predict(input_text_tfidf)
 
-    # Make predictions
-    predictions_encoded = model.predict(input_text_tfidf)
+        # Decode predictions using LabelEncoder
+        prediction_label = label_encoder.inverse_transform(prediction_encoded)[0]
 
-    # Decode predictions using LabelEncoder
-    predictions = label_encoder.inverse_transform(predictions_encoded)
+        # Return the prediction as JSON
+        return jsonify({'prediction': prediction_label})
+    except Exception as e:
+        return jsonify({'error': str(e)})
 
-    # Return the predictions as JSON
-    return jsonify(predictions.tolist())
 
 if __name__ == '__main__':
-    app.run(port=5000)
+    app.run(debug=True)
